@@ -1,0 +1,74 @@
+gitignore
+# Ignore built products
+bin/
+obj/
+
+# Ignore NuGet packages
+*.nupkg
+
+# Ignore project user settings
+.vs/
+*.suo
+*.user
+*.userprefs
+
+# Ignore generated files
+%appdata%/Microsoft/UserSecrets/
+%USERPROFILE%/.dotnet/NuGetScratch
+.idea/
+.ionide/
+
+# Ignore test results
+TestResults/
+
+# Ignore coverage files
+*.coverage
+*.coveragexml
+
+# Ignore profiling output
+*.vsp
+*.vspx
+
+# Ignore StyleCop results
+StyleCopResults.xml
+InstallShield_Temp/
+
+# Ignore Cake build files
+tools/
+
+# Ignore Azure Service Fabric deployment files
+pkg/
+
+# Ignore Visual Studio Code files
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+
+# Ignore specific files
+*.log
+*.opensdf
+*.sdf
+*.vsscc
+*.vspscc
+*.vssscc
+*.builds
+*.tlog
+*.bak
+*.cache
+*.VC.db
+
+# Ignore Rider files
+.idea/
+
+# Ignore ReSharper files
+*.resharper.user
+
+# Ignore Visual Studio for Mac
+*.csproj.user
+*.shproj.user
+
+# Ignore git submodule files
+.gitmodules
+
+# Ignore the NuGet parts of a Cake.NET build
+tools/packages/
