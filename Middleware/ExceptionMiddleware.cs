@@ -1,28 +1,19 @@
-using Figurinhas.Models.Exceptions;
+using Stickers.Models.Exceptions;
 using System.Text.Json;
 
-namespace Figurinhas.Middleware;
+namespace Stickers.Middleware;
 
-public class ExceptionMiddleware
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionMiddleware> _logger;
-
-    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
+            await next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado na aplicação");
+            logger.LogError(ex, "Unhandled error in the application");
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -33,11 +24,13 @@ public class ExceptionMiddleware
 
         var response = exception switch
         {
-            UnauthorizedException => new { message = "Usuário não autenticado", statusCode = 401 },
-            ForbiddenException => new { message = "Usuário não autorizado", statusCode = 403 },
+            IdentityRegistrationException => new { message = exception.Message, statusCode = 400 },
+            UsernameAlreadyExistsException => new { message = "Username already exists", statusCode = 400 },
+            UnauthorizedException => new { message = "User not authenticated", statusCode = 401 },
+            ForbiddenException => new { message = "User not authorized", statusCode = 403 },
             ConflictException => new { message = exception.Message, statusCode = 409 },
             NotFoundException => new { message = exception.Message, statusCode = 404 },
-            _ => new { message = "Erro interno do servidor", statusCode = 500 }
+            _ => new { message = "Internal server error", statusCode = 500 }
         };
 
         context.Response.StatusCode = response.statusCode;

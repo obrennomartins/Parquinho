@@ -1,10 +1,9 @@
-using Figurinhas.Models.DTOs;
-using Figurinhas.Models.Entities;
+using Stickers.Models.Dtos;
 
-namespace Figurinhas.Services;
+namespace Stickers.Services.Interfaces;
 
 public interface IAuthService
 {
-    Task<LoginResponseDto?> LoginAsync(LoginDto loginDto);
-    string GenerateJwtToken(Usuario usuario);
+    Task<RegisterResponseDto> Register(RegisterDto registerDto);
+    Task<LoginResponseDto?> Login(LoginDto loginDto);
 }

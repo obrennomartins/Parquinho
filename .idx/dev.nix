@@ -4,12 +4,24 @@
   # Which nixpkgs channel to use.
   channel = "stable-24.11"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
-  packages = [ pkgs.dotnet-sdk_9 ];
+  packages = [ 
+    pkgs.dotnet-sdk_9
+    pkgs.postgresql
+    pkgs.docker
+  ];
+  services = {
+    postgres = {
+      enable = true;
+    };
+    docker = {
+      enable = true;
+    };
+  };
   # Sets environment variables in the workspace
   env = { };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
-    extensions = [ "muhammad-sammy.csharp" "rangav.vscode-thunder-client" ];
+    extensions = [ "muhammad-sammy.csharp" ];
     workspace = {
       # Runs when a workspace is (re)started
       onStart = { run-server = "dotnet watch --urls=http://localhost:3000"; };

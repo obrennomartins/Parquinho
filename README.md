@@ -1,10 +1,6 @@
-# .NET API Service Starter
+# Parquinho
 
-This is a minimal .NET API service starter based on [Google Cloud Run Quickstart](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-dotnet-service).
+This project was developed as part of the technical analysis for a Full Stack Developer position.
 
-## Getting Started
-
-Server should run automatically when starting a workspace. To run manually, run:
-```sh
-dotnet watch --urls=http://localhost:3000
-```
+# Version history
+1. [b9c6f9a](https://github.com/obrennomartins/Parquinho/tree/b9c6f9a67c82f275426de762d3551aa633e9ad6a)

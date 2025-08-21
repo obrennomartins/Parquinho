@@ -1,21 +1,15 @@
-namespace Figurinhas.Models.Exceptions;
+namespace Stickers.Models.Exceptions;
 
-public class UnauthorizedException : Exception
-{
-    public UnauthorizedException(string message) : base(message) { }
-}
+// TODO Throwing exception is expensive; try Result Pattern instead
 
-public class ForbiddenException : Exception
-{
-    public ForbiddenException(string message) : base(message) { }
-}
+public class UnauthorizedException(string message) : Exception(message) { }
 
-public class ConflictException : Exception
-{
-    public ConflictException(string message) : base(message) { }
-}
+public class ForbiddenException(string message) : Exception(message) { }
 
-public class NotFoundException : Exception
-{
-    public NotFoundException(string message) : base(message) { }
-}
+public class UsernameAlreadyExistsException(string message) : Exception(message) { }
+
+public class IdentityRegistrationException(string message) : Exception(message) { }
+
+public class ConflictException(string message) : Exception(message) { }
+
+public class NotFoundException(string message) : Exception(message) { }

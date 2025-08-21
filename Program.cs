@@ -1,17 +1,20 @@
-using Figurinhas.Data;
-using Figurinhas.Services;
-using Figurinhas.Middleware;
+using Stickers.Data;
+using Stickers.Services;
+using Stickers.Services.Interfaces;
+using Stickers.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Stickers.Models.Entities;
+using System.Reflection;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog
-// TODO Levar isto pro appsettings.json
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
@@ -19,48 +22,52 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// EF Core
-// TODO Usar Postgres
-builder.Services.AddDbContext<FigurinhasDbContext>(options => 
+builder.Services.AddDbContext<StickersDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddIdentity<User, IdentityRole>(options =>
+{
+    options.Password.RequiredLength = 6;
+})
+.AddEntityFrameworkStores<StickersDbContext>()
+.AddDefaultTokenProviders();
+
 // JWT
-// TODO Mover a chave para outro local
-var jwtKey = "chaveDasFigurinhasQueEhUltraSecreta";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "Q6BdpuDcgep7%L3%7DFVPna@bmrfikW4";
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
-builder.Services.AddAuthorization(options =>
+builder.Services.AddAuthentication(options => {
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
 {
-    options.AddPolicy("colecionador", policy => 
-        policy.RequireClaim("role", "colecionador"));
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
 });
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("collector", policy => policy.RequireClaim("role", "collector"))
+    .AddPolicy("viewer", policy => policy.RequireClaim("role", "viewer"));
+
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IFigurinhaService, FigurinhaService>();
+builder.Services.AddScoped<IStickerService, StickerService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen(options =>
 {
-    c.SwaggerDoc("v1", new() { Title = "Figurinhas API", Version = "v1" });
-    
-    // Configuração do JWT no Swagger
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    options.SwaggerDoc("v1", new() { Title = "Stickers", Version = "v1" });
+
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header. Digite apenas o token (sem 'Bearer')",
+        Description = "JWT Authorization header. Token only (without 'Bearer')",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
@@ -68,7 +75,7 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
     {
         {
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -86,13 +93,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// adicionar dados iniciais
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<FigurinhasDbContext>();
-    DataSeeder.SeedData(context);
-}
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -102,6 +102,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-Log.Information("API de Figurinhas iniciada com sucesso");
+Log.Information("Stickers initialized successfully");
 
 app.Run();

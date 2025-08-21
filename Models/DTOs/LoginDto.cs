@@ -1,12 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Figurinhas.Models.DTOs;
+namespace Stickers.Models.Dtos;
 
 public class LoginDto
 {
-    [Required(ErrorMessage = "Username é obrigatório")]
+    [Required(ErrorMessage = "Username is required")]
     public string Username { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Password é obrigatório")]
+    [Required(ErrorMessage = "Password is required")]
+    [DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
 }

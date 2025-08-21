@@ -1,65 +1,109 @@
-using Figurinhas.Data;
-using Figurinhas.Models.DTOs;
-using Figurinhas.Models.Entities;
-using Microsoft.EntityFrameworkCore;
+using Stickers.Models.Dtos;
+using Stickers.Models.Entities;
+using Stickers.Models.Exceptions;
+using Stickers.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace Figurinhas.Services;
+namespace Stickers.Services;
 
-public class AuthService : IAuthService
+public class AuthService(
+    UserManager<User> userManager,
+    SignInManager<User> signInManager,
+    IConfiguration configuration,
+    ILogger<AuthService> logger) : IAuthService
 {
-    private readonly FigurinhasDbContext _context;
-    private readonly ILogger<AuthService> _logger;
-
-    public AuthService(FigurinhasDbContext context, ILogger<AuthService> logger)
+    public async Task<RegisterResponseDto> Register(RegisterDto registerDto)
     {
-        _context = context;
-        _logger = logger;
+        logger.LogInformation("Processing sign up for user: {Username}", registerDto.Username);
+
+        var existingUser = await userManager.FindByNameAsync(registerDto.Username);
+        if (existingUser != null)
+        {
+            logger.LogWarning("Username already exists: {Usuario}", registerDto.Username);
+            throw new UsernameAlreadyExistsException($"Username already exists: {registerDto.Username}");
+        }
+
+        var user = new User
+        {
+            UserName = registerDto.Username,
+            Role = registerDto.Role.ToLower(),
+        };
+
+        var result = await userManager.CreateAsync(user, registerDto.Password);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(erro => erro.Description));
+            logger.LogWarning("Error registering user {Usename}: {Erros}", registerDto.Username, errors);
+            throw new IdentityRegistrationException($"Error registering user {registerDto.Username}: {errors}");
+        }
+
+        logger.LogInformation("Sign up successful for user: {Username}", registerDto.Username);
+
+        return new RegisterResponseDto
+        {
+            Success = true,
+            Message = "User registered successfully",
+            Username = registerDto.Username,
+            Role = registerDto.Role
+        };
     }
 
-    public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
+    public async Task<LoginResponseDto?> Login(LoginDto loginDto)
     {
-        _logger.LogInformation("Processando login para usuário: {Username}", loginDto.Username);
+        logger.LogInformation("Processing login for user: {Username}", loginDto.Username);
 
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Username == loginDto.Username && u.Password == loginDto.Password);
-
-        if (usuario == null)
+        var user = await userManager.FindByNameAsync(loginDto.Username);
+        if (user == null)
         {
-            _logger.LogWarning("Credenciais inválidas para usuário: {Username}", loginDto.Username);
+            logger.LogWarning("User not found: {Username}", loginDto.Username);
             return null;
         }
 
-        var token = GenerateJwtToken(usuario);
+        var result = await signInManager.CheckPasswordSignInAsync(user, loginDto.Password, lockoutOnFailure: false);
+        if (!result.Succeeded)
+        {
+            logger.LogWarning("Wrong password for user: {Username}", loginDto.Username);
+            return null;
+        }
 
-        _logger.LogInformation("Login realizado com sucesso para usuário: {Username}, Role: {Role}",
-            usuario.Username, usuario.Role);
+        var token = GenerateJwtToken(user);
+        var expiresAt = DateTime.UtcNow.AddHours(24);
+
+        logger.LogInformation("Login successful for user: {Username} with role: {Role}", user.UserName, user.Role);
 
         return new LoginResponseDto
         {
             Token = token,
-            Role = usuario.Role,
-            Username = usuario.Username
+            Role = user.Role,
+            Username = user.UserName ?? "", // TODO check null username
+            ExpiresAt = expiresAt
         };
     }
 
-    public string GenerateJwtToken(Usuario usuario)
+    public string GenerateJwtToken(User user)
     {
-        var key = Encoding.ASCII.GetBytes("chaveDasFigurinhasQueEhUltraSecreta");
-        var tokenDescriptor = new SecurityTokenDescriptor
+        var jwtKey = configuration["Jwt:Key"] ?? "Q6BdpuDcgep7%L3%7DFVPna@bmrfikW4";
+        var key = Encoding.ASCII.GetBytes(jwtKey);
+
+        var claims = new List<Claim>
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                    new Claim("id", usuario.Id.ToString()),
-                    new Claim("username", usuario.Username),
-                    new Claim("role", usuario.Role.ToLower())
-                }),
+            new (ClaimTypes.NameIdentifier, user.Id),
+            new (ClaimTypes.Name, user.UserName!),
+            new ("role", user.Role.ToLower())
+        };
+
+        var tokenDescriptor = new SecurityTokenDescriptor 
+        { 
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(24),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature
+            )
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();

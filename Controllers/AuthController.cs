@@ -1,48 +1,49 @@
-using Figurinhas.Models.DTOs;
-using Figurinhas.Services;
+using Stickers.Models.Dtos;
+using Stickers.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Figurinhas.Controllers;
+namespace Stickers.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(IAuthService authService, ILogger<AuthController> logger) : ControllerBase
 {
-    private readonly IAuthService _authService;
-    private readonly ILogger<AuthController> _logger;
+    [HttpPost("register")]
+    public async Task<ActionResult<RegisterResponseDto>> Register(RegisterDto registerDto)
+    { 
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
-    {
-        _authService = authService;
-        _logger = logger;
+        var result = await authService.Register(registerDto);
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponseDto>> Login(LoginDto loginDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            _logger.LogInformation("Tentativa de login para usuário: {Username}", loginDto.Username);
-
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("Dados de login inválidos para usuário: {Username}", loginDto.Username);
-                return BadRequest(ModelState);
-            }
-
-            var result = await _authService.LoginAsync(loginDto);
-
-            if (result == null)
-            {
-                return Unauthorized(new { message = "Credenciais inválidas" });
-            }
-
-            return Ok(result);
+            return BadRequest(ModelState);
         }
-        catch (Exception ex)
+
+        logger.LogInformation("Login attempt for user: {Username}", loginDto.Username);
+
+        var result = await authService.Login(loginDto);
+
+        if (result == null)
         {
-            _logger.LogError(ex, "Erro interno durante o login");
-            return StatusCode(500, new { message = "Erro interno do servidor" });
+            logger.LogWarning("Invalid credentials for user: {Username}", loginDto.Username);
+            return Unauthorized(new { message = "Invalid credentials" });
         }
+
+        return Ok(result);
     }
 }
