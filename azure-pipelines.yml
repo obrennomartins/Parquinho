@@ -1,0 +1,31 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: UseDotNet@2
+  inputs:
+    version: '9.x'
+    packageType: 'sdk'
+- script: |
+    dotnet restore
+    dotnet build --configuration $(buildConfiguration)
+  displayName: 'Build project'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+    arguments: '--configuration $(builderConfiguration) --output $(Builder.ArtifactStagingDirectory)'
+    zipAfterPublish: true
+  displayName: 'Publish project'
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+  displayName: 'Publish artifacts'
