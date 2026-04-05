@@ -86,7 +86,8 @@ public class AuthService(
 
     public string GenerateJwtToken(User user)
     {
-        var jwtKey = configuration["Jwt:Key"] ?? "Q6BdpuDcgep7%L3%7DFVPna@bmrfikW4";
+        var jwtKey = configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("Jwt:Key is not configured.");
         var key = Encoding.ASCII.GetBytes(jwtKey);
 
         var claims = new List<Claim>
