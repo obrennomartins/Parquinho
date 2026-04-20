@@ -9,6 +9,7 @@ using Serilog;
 using Stickers.Models.Entities;
 using System.Reflection;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 
 
@@ -94,8 +95,23 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+var pathBase = builder.Configuration["PathBase"];
+
+if (!string.IsNullOrEmpty(pathBase))
+{
+    app.UsePathBase(pathBase);
+}
+
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(config => 
+{
+    config.SwaggerEndpoint("v1/swagger.json", "Stickers v1");
+});
 
 app.UseMiddleware<ExceptionMiddleware>();
 
